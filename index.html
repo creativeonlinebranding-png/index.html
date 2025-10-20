@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Radio Recorder Test</title>
+<style>
+body { font-family: Arial; background:#111; color:#fff; text-align:center; padding:50px; }
+.radio-button { width:180px; height:50px; font-size:18px; margin:10px; cursor:pointer; border:none; border-radius:10px; background:gold; color:black; }
+.radio-button.stop { background:#ffd700; }
+a { color: #ffd700; display:block; margin-top:15px; font-size:16px; text-decoration:none; }
+</style>
+</head>
+<body>
+
+<h2>Radio Recording Test</h2>
+
+<audio id="radioAudio" controls>
+  <source src="https://radio3.eclipse-streaming.co.za/listen/1africaradio/radio.mp3" type="audio/mpeg">
+  Your browser does not support the audio element.
+</audio>
+
+<div class="recording-controls">
+  <button id="startRec" class="radio-button">🎙️ Start Recording</button>
+  <button id="stopRec" class="radio-button stop" disabled>⏹️ Stop Recording</button>
+  <a id="downloadRec" style="display:none;" download>⬇️ Download Recording</a>
+</div>
+
+<script>
+const radioAudio = document.getElementById('radioAudio');
+let mediaRecorder;
+let recordedChunks = [];
+
+const startBtn = document.getElementById('startRec');
+const stopBtn = document.getElementById('stopRec');
+const downloadLink = document.getElementById('downloadRec');
+
+startBtn.onclick = async () => {
+  if (!radioAudio.captureStream) {
+    alert('Your browser does not support audio capture.');
+    return;
+  }
+
+  // Play audio if not already playing
+  await radioAudio.play().catch(() => alert('Cannot play audio.'));
+
+  const stream = radioAudio.captureStream();
+  mediaRecorder = new MediaRecorder(stream);
+
+  recordedChunks = [];
+  mediaRecorder.ondataavailable = e => {
+    if (e.data.size > 0) recordedChunks.push(e.data);
+  };
+
+  mediaRecorder.onstop = () => {
+    const blob = new Blob(recordedChunks, { type: 'audio/webm' });
+    const url = URL.createObjectURL(blob);
+
+    const now = new Date();
+    const filename = `Recording_${now.getFullYear()}-${(now.getMonth()+1).toString().padStart(2,'0')}-${now.getDate().toString().padStart(2,'0')}_${now.getHours().toString().padStart(2,'0')}-${now.getMinutes().toString().padStart(2,'0')}.webm`;
+
+    downloadLink.href = url;
+    downloadLink.download = filename;
+    downloadLink.style.display = 'inline-block';
+    downloadLink.textContent = `⬇️ Download ${filename}`;
+  };
+
+  mediaRecorder.start();
+  startBtn.disabled = true;
+  stopBtn.disabled = false;
+};
+
+stopBtn.onclick = () => {
+  if (mediaRecorder && mediaRecorder.state !== "inactive") {
+    mediaRecorder.stop();
+  }
+  startBtn.disabled = false;
+  stopBtn.disabled = true;
+};
+</script>
+
+</body>
+</html>
